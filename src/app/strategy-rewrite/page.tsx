@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 
 interface StrategyMessage {
@@ -15,29 +15,26 @@ export default function StrategyRewritePage() {
   const [rewrittenCode, setRewrittenCode] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [strategies, setStrategies] = useState<StrategyMessage[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [showList, setShowList] = useState(false);
 
   const fetchStrategies = async () => {
+    setIsLoading(true);
     try {
       const response = await fetch("/api/telegram-strategies");
       const data = await response.json();
       
       if (data.success && data.messages) {
         setStrategies(data.messages);
-        setLastUpdate(new Date().toLocaleTimeString());
+        setShowList(true);
+      } else {
+        alert("尚無策略記錄");
       }
     } catch (error) {
-      console.error("Failed to fetch strategies:", error);
+      alert("獲取失敗");
     }
     setIsLoading(false);
   };
-
-  useEffect(() => {
-    fetchStrategies();
-    const interval = setInterval(fetchStrategies, 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   const rewriteStrategy = async () => {
     if (!originalCode.trim()) {
@@ -61,6 +58,7 @@ export default function StrategyRewritePage() {
 
   const selectStrategy = (strategy: StrategyMessage) => {
     setOriginalCode(strategy.text);
+    setShowList(false);
   };
 
   const copyToClipboard = (code: string) => {
@@ -75,65 +73,62 @@ export default function StrategyRewritePage() {
           ← 返回控制台
         </Link>
         
-        <div className="flex justify-between items-center mb-2">
-          <h1 className="text-3xl font-bold">📝 量化策略改寫</h1>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500">
-              最後更新：{lastUpdate || "載入中..."}
-            </span>
-            <button
-              onClick={fetchStrategies}
-              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm"
-            >
-              🔄 刷新
-            </button>
+        <h1 className="text-3xl font-bold mb-2">📝 量化策略改寫</h1>
+        <p className="text-gray-400 mb-6">手動記錄群組策略並改寫</p>
+
+        {/* 策略列表彈窗 */}
+        {showList && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">📋 選擇策略</h2>
+                <button onClick={() => setShowList(false)} className="text-gray-500 hover:text-white">✕</button>
+              </div>
+              
+              {strategies.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">尚無策略</p>
+              ) : (
+                <div className="space-y-3">
+                  {strategies.map((strategy) => (
+                    <div
+                      key={strategy.id}
+                      onClick={() => selectStrategy(strategy)}
+                      className="bg-gray-800 rounded-lg p-3 hover:bg-gray-700 cursor-pointer"
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="text-sm font-medium text-blue-400">#{strategy.id}</span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(strategy.date).toLocaleString()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-300 truncate">
+                        {strategy.text.substring(0, 80)}...
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-        <p className="text-gray-400 mb-6">自動記錄群組內的策略代碼</p>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-            <h2 className="text-xl font-semibold mb-4">📥 群組策略</h2>
-            
-            {isLoading ? (
-              <p className="text-gray-500 text-center py-8">載入中...</p>
-            ) : strategies.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-2">尚無策略</p>
-                <p className="text-sm text-gray-600">在群組發送策略代碼會自動顯示</p>
-              </div>
-            ) : (
-              <div className="space-y-3 max-h-[600px] overflow-y-auto">
-                {strategies.map((strategy) => (
-                  <div
-                    key={strategy.id}
-                    onClick={() => selectStrategy(strategy)}
-                    className="bg-gray-800 rounded-lg p-3 hover:bg-gray-700 cursor-pointer transition-colors"
-                  >
-                    <div className="flex justify-between items-start mb-1">
-                      <span className="text-sm font-medium text-blue-400">#{strategy.id}</span>
-                      <span className="text-xs text-gray-500">
-                        {new Date(strategy.date).toLocaleString()}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-300 truncate mb-1">
-                      {strategy.text.substring(0, 50)}...
-                    </p>
-                    <p className="text-xs text-gray-500">from: {strategy.from}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
+          {/* 原始策略 */}
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">📄 原始策略</h2>
+              <button
+                onClick={fetchStrategies}
+                disabled={isLoading}
+                className="text-sm bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded disabled:opacity-50"
+              >
+                {isLoading ? "載入中..." : "📥 獲取策略"}
+              </button>
             </div>
             <textarea
               value={originalCode}
               onChange={(e) => setOriginalCode(e.target.value)}
-              placeholder="從左側選擇策略或直接輸入..."
+              placeholder="選擇策略或直接輸入..."
               className="w-full h-[500px] bg-gray-800 border border-gray-700 rounded-lg p-4 text-sm font-mono text-green-400 resize-none focus:border-blue-500 focus:outline-none"
             />
             <button
@@ -147,7 +142,8 @@ export default function StrategyRewritePage() {
             </button>
           </div>
 
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+          {/* 優化後策略 */}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 lg:col-span-2">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">✨ 優化後策略</h2>
               {rewrittenCode && (
@@ -159,12 +155,13 @@ export default function StrategyRewritePage() {
             <textarea
               value={rewrittenCode}
               readOnly
-              placeholder="改寫後的策略會在這裡顯示..."
+              placeholder="改寫後的策略..."
               className="w-full h-[500px] bg-gray-800 border border-gray-700 rounded-lg p-4 text-sm font-mono text-blue-400 resize-none focus:outline-none"
             />
           </div>
         </div>
 
+        {/* 優化建議 */}
         <div className="mt-6 bg-gray-900 border border-gray-800 rounded-xl p-6">
           <h2 className="text-xl font-semibold mb-4">💡 優化建議</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
