@@ -3,68 +3,56 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
-interface StrategyRewrite {
-  id: string;
-  originalName: string;
-  rewrittenName: string;
-  originalCode: string;
-  rewrittenCode: string;
-  timestamp: string;
-}
-
-interface TelegramMessage {
-  message_id: number;
+interface StrategyMessage {
+  id: number;
   text: string;
   from: string;
   date: string;
+  selected?: boolean;
 }
 
 export default function StrategyRewritePage() {
   const [originalCode, setOriginalCode] = useState("");
   const [rewrittenCode, setRewrittenCode] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [history, setHistory] = useState<StrategyRewrite[]>([]);
-  const [messages, setMessages] = useState<TelegramMessage[]>([]);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-  const [showMessageList, setShowMessageList] = useState(false);
+  const [strategies, setStrategies] = useState<StrategyMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<string>("");
 
-  // 從 Telegram 群組獲取訊息
-  const fetchFromGroup = async () => {
-    setIsLoadingMessages(true);
+  // 自動獲取群組策略
+  const fetchStrategies = async () => {
     try {
-      const response = await fetch("/api/telegram-messages");
+      const response = await fetch("/api/telegram-strategies");
       const data = await response.json();
       
       if (data.success && data.messages) {
-        setMessages(data.messages);
-        setShowMessageList(true);
-      } else {
-        alert(data.hint || data.error || "無法獲取訊息");
+        setStrategies(data.messages);
+        setLastUpdate(new Date().toLocaleTimeString());
       }
     } catch (error) {
-      alert("獲取失敗，請確保機器人有群組權限");
+      console.error("Failed to fetch strategies:", error);
     }
-    setIsLoadingMessages(false);
+    setIsLoading(false);
   };
 
-  // 選擇訊息
-  const selectMessage = (msg: TelegramMessage) => {
-    setOriginalCode(msg.text);
-    setShowMessageList(false);
-  };
+  // 頁面載入時自動獲取
+  useEffect(() => {
+    fetchStrategies();
+    
+    // 每 30 秒自動刷新
+    const interval = setInterval(fetchStrategies, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const rewriteStrategy = async () => {
     if (!originalCode.trim()) {
-      alert("請輸入原始策略代碼");
+      alert("請選擇或輸入策略代碼");
       return;
     }
 
     setIsProcessing(true);
-
-    // 模擬策略改寫過程
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    // 簡單的策略優化示例
     const optimized = originalCode
       .replace(/RSI/g, "RSI + EMA")
       .replace(/if.* Buy/g, "if (RSI < 30 && EMA > SMA) Buy")
@@ -74,103 +62,98 @@ export default function StrategyRewritePage() {
 
     setRewrittenCode(optimized);
     setIsProcessing(false);
+  };
 
-    // 加入歷史記錄
-    const newRewrite: StrategyRewrite = {
-      id: Date.now().toString(),
-      originalName: "策略-" + new Date().toLocaleTimeString(),
-      rewrittenName: "優化策略-" + new Date().toLocaleTimeString(),
-      originalCode,
-      rewrittenCode: optimized,
-      timestamp: new Date().toISOString(),
-    };
-    setHistory([newRewrite, ...history]);
+  const selectStrategy = (strategy: StrategyMessage) => {
+    setOriginalCode(strategy.text);
   };
 
   const copyToClipboard = (code: string) => {
     navigator.clipboard.writeText(code);
-    alert("已複製到剪貼簿！");
+    alert("已複製到剪貼簿！ return (
+    <div className="");
   };
 
-  const clearAll = () => {
-    setOriginalCode("");
-    setRewrittenCode("");
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
-      <div className="max-w-6xl mx-auto p-8">
+ min-h-screen bg-gray-950 text-gray-100">
+      <div className="max-w-7xl mx-auto p-8">
         <Link href="/" className="text-blue-400 hover:underline mb-4 inline-block">
           ← 返回控制台
         </Link>
         
-        <h1 className="text-3xl font-bold mb-2">📝 量化策略改寫</h1>
-        <p className="text-gray-400 mb-8">輸入你的策略代碼，AI 幫你優化與改寫</p>
+        <div className="flex justify-between items-center mb-2">
+          <h1 className="text-3xl font-bold">📝 量化策略改寫</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-500">
+              最後更新：{lastUpdate || "載入中..."}
+            </span>
+            <button
+              onClick={fetchStrategies}
+              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm"
+            >
+              🔄 刷新
+            </button>
+          </div>
+        </div>
+        <p className="text-gray-400 mb-6">自動記錄群組內的策略代碼</p>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* 輸入區 */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">📄 原始策略</h2>
-              <div className="flex gap-2">
-                <button
-                  onClick={fetchFromGroup}
-                  disabled={isLoadingMessages}
-                  className="text-sm bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded transition-colors disabled:opacity-50"
-                >
-                  {isLoadingMessages ? "載入中..." : "📥 從群組獲取"}
-                </button>
-                <button
-                  onClick={clearAll}
-                  className="text-sm text-gray-500 hover:text-gray-300"
-                >
-                  清空
-                </button>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* 左側：群組策略列表 */}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <h2 className="text-xl font-semibold mb-4">📥 群組策略</h2>
+            
+            {isLoading ? (
+              <p className="text-gray-500 text-center py-8">載入中...</p>
+            ) : strategies.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-2">尚無策略</p>
+                <p className="text-sm text-gray-600">
+                  在群組發送策略代碼會自動顯示在這裡
+                </p>
               </div>
-            </div>
-
-            {/* 群組訊息列表 */}
-            {showMessageList && messages.length > 0 && (
-              <div className="mb-4 bg-gray-800 rounded-lg p-3 max-h-48 overflow-y-auto">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-gray-400">選擇訊息：</span>
-                  <button
-                    onClick={() => setShowMessageList(false)}
-                    className="text-gray-500 hover:text-gray-300"
+            ) : (
+              <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                {strategies.map((strategy) => (
+                  <div
+                    key={strategy.id}
+                    onClick={() => selectStrategy(strategy)}
+                    className="bg-gray-800 rounded-lg p-3 hover:bg-gray-700 cursor-pointer transition-colors"
                   >
-                    ✕
-                  </button>
-                </div>
-                {messages.map((msg) => (
-                  <button
-                    key={msg.message_id}
-                    onClick={() => selectMessage(msg)}
-                    className="w-full text-left p-2 hover:bg-gray-700 rounded text-sm truncate"
-                  >
-                    {msg.text.substring(0, 60)}...
-                  </button>
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="text-sm font-medium text-blue-400">
+                        #{strategy.id}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(strategy.date).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-300 truncate mb-1">
+                      {strategy.text.substring(0, 50)}...
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      from: {strategy.from}
+                    </p>
+                  </div>
                 ))}
               </div>
             )}
+          </div>
+
+          {/* 中間：原始策略 */}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">📄 原始策略</h2>
+            </div>
             <textarea
               value={originalCode}
               onChange={(e) => setOriginalCode(e.target.value)}
-              placeholder="// 輸入你的 Pine Script 或其他策略代碼...
-
-// 示例：
-// strategy('RSI Strategy', overlay=true)
-rsi = request.security(ticker.new('BINANCE:BTCUSDT'), '60', rsi(14))
-if rsi < 30
-    strategy.entry('Buy', strategy.long)
-if rsi > 70
-    strategy.close('Buy')"
-              className="w-full h-96 bg-gray-800 border border-gray-700 rounded-lg p-4 text-sm font-mono text-green-400 resize-none focus:border-blue-500 focus:outline-none"
+              placeholder="從左側選擇策略或直接輸入..."
+              className="w-full h-[500px] bg-gray-800 border border-gray-700 rounded-lg p-4 text-sm font-mono text-green-400 resize-none focus:border-blue-500 focus:outline-none"
             />
             <button
               onClick={rewriteStrategy}
-              disabled={isProcessing}
+              disabled={isProcessing || !originalCode.trim()}
               className={`mt-4 w-full py-3 rounded-lg font-medium transition-colors ${
-                isProcessing
+                isProcessing || !originalCode.trim()
                   ? "bg-gray-600 cursor-not-allowed"
                   : "bg-green-600 hover:bg-green-700"
               }`}
@@ -179,8 +162,8 @@ if rsi > 70
             </button>
           </div>
 
-          {/* 輸出區 */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          {/* 右側：優化後策略 */}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">✨ 優化後策略</h2>
               {rewrittenCode && (
@@ -196,13 +179,13 @@ if rsi > 70
               value={rewrittenCode}
               readOnly
               placeholder="改寫後的策略會在這裡顯示..."
-              className="w-full h-96 bg-gray-800 border border-gray-700 rounded-lg p-4 text-sm font-mono text-blue-400 resize-none focus:outline-none"
+              className="w-full h-[500px] bg-gray-800 border border-gray-700 rounded-lg p-4 text-sm font-mono text-blue-400 resize-none focus:outline-none"
             />
           </div>
         </div>
 
         {/* 優化建議 */}
-        <div className="mt-8 bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <div className="mt-6 bg-gray-900 border border-gray-800 rounded-xl p-6">
           <h2 className="text-xl font-semibold mb-4">💡 優化建議</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-gray-800 rounded-lg p-4">
@@ -231,37 +214,6 @@ if rsi > 70
             </div>
           </div>
         </div>
-
-        {/* 歷史記錄 */}
-        {history.length > 0 && (
-          <div className="mt-8 bg-gray-900 border border-gray-800 rounded-xl p-6">
-            <h2 className="text-xl font-semibold mb-4">📜 改寫歷史</h2>
-            <div className="space-y-3">
-              {history.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-gray-800 rounded-lg p-4 flex justify-between items-center"
-                >
-                  <div>
-                    <p className="font-medium">{item.rewrittenName}</p>
-                    <p className="text-sm text-gray-500">
-                      {new Date(item.timestamp).toLocaleString()}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setOriginalCode(item.originalCode);
-                      setRewrittenCode(item.rewrittenCode);
-                    }}
-                    className="text-blue-400 hover:text-blue-300 text-sm"
-                  >
-                    查看
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
