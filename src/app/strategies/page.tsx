@@ -170,12 +170,11 @@ export default function StrategiesPage() {
           </div>
         </div>
 
-        {/* 支援格式說明 */}
+        {/* 支援 JSON 和 CSV 文件上傳 */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6">
           <h3 className="font-semibold mb-2">📋 支援格式</h3>
-          <div className="text-sm text-gray-400 space-y-2">
-            <p><strong className="text-green-400">JSON:</strong> [{{"name":"策略名","code":"代碼","return":10.5,"maxDrawdown":5.2,"winRate":55,"sharpe":1.2,"trades":100}}]</p>
-            <p><strong className="text-blue-400">CSV:</strong> name,code,return,maxDrawdown,winRate,sharpe,trades</p>
+          <div className="text-sm text-gray-400">
+            <p>JSON 或 CSV 文件，須包含: name, code, return, maxDrawdown, winRate, sharpe, trades</p>
           </div>
         </div>
 
