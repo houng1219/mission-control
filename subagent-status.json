@@ -1,0 +1,55 @@
+{
+  "lastUpdate": "2026-02-20T06:21:22.846Z",
+  "agents": [
+    {
+      "id": "fb53c63f-9c82-4b3b-b354-2d94b27f7169",
+      "name": "Main Agent",
+      "role": "Direct Chat",
+      "status": "working",
+      "currentTask": "Tokens: 86,248",
+      "isSubagent": false,
+      "lastUpdate": "2026-02-20T06:21:22.846Z",
+      "sessionKey": "agent:main:main"
+    },
+    {
+      "id": "27cb6ac6-b688-4017-954c-3948911f1687",
+      "name": "-1003605793946",
+      "role": "Group Chat",
+      "status": "idle",
+      "currentTask": "閒置",
+      "isSubagent": false,
+      "lastUpdate": "2026-02-20T06:21:22.846Z",
+      "sessionKey": "agent:main:telegram:group:-1003605793946"
+    },
+    {
+      "id": "b5e5d770-fa79-4d9b-8f16-89a08c128b6e",
+      "name": "-1003269123983",
+      "role": "Group Chat",
+      "status": "idle",
+      "currentTask": "閒置",
+      "isSubagent": false,
+      "lastUpdate": "2026-02-20T06:21:22.846Z",
+      "sessionKey": "agent:main:telegram:group:-1003269123983"
+    },
+    {
+      "id": "3324d8e6-d551-424d-a1ed-1f77b5f15833",
+      "name": "-1003759037413",
+      "role": "Group Chat",
+      "status": "idle",
+      "currentTask": "閒置",
+      "isSubagent": false,
+      "lastUpdate": "2026-02-20T06:21:22.846Z",
+      "sessionKey": "agent:main:telegram:group:-1003759037413"
+    },
+    {
+      "id": "070c2624-23ac-4cfd-9e2e-a6387e2a8ff7",
+      "name": "371",
+      "role": "Group Chat",
+      "status": "idle",
+      "currentTask": "閒置",
+      "isSubagent": false,
+      "lastUpdate": "2026-02-20T06:21:22.846Z",
+      "sessionKey": "agent:main:telegram:group:-1003759037413:topic:371"
+    }
+  ]
+}
