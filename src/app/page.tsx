@@ -72,6 +72,19 @@ export default function Home() {
               交易策略管理与回测结果。
             </p>
           </Link>
+
+          <Link
+            href="/strategy-rewrite"
+            className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-purple-500 transition-colors group"
+          >
+            <div className="text-4xl mb-4">📝</div>
+            <h2 className="text-xl font-semibold mb-2 group-hover:text-purple-400 transition-colors">
+              策略改寫
+            </h2>
+            <p className="text-gray-400 text-sm">
+              AI 幫你優化交易策略代碼。
+            </p>
+          </Link>
         </div>
       </div>
     </div>
