@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 interface StrategyRewrite {
@@ -12,11 +12,46 @@ interface StrategyRewrite {
   timestamp: string;
 }
 
+interface TelegramMessage {
+  message_id: number;
+  text: string;
+  from: string;
+  date: string;
+}
+
 export default function StrategyRewritePage() {
   const [originalCode, setOriginalCode] = useState("");
   const [rewrittenCode, setRewrittenCode] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [history, setHistory] = useState<StrategyRewrite[]>([]);
+  const [messages, setMessages] = useState<TelegramMessage[]>([]);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [showMessageList, setShowMessageList] = useState(false);
+
+  // 從 Telegram 群組獲取訊息
+  const fetchFromGroup = async () => {
+    setIsLoadingMessages(true);
+    try {
+      const response = await fetch("/api/telegram-messages");
+      const data = await response.json();
+      
+      if (data.success && data.messages) {
+        setMessages(data.messages);
+        setShowMessageList(true);
+      } else {
+        alert(data.hint || data.error || "無法獲取訊息");
+      }
+    } catch (error) {
+      alert("獲取失敗，請確保機器人有群組權限");
+    }
+    setIsLoadingMessages(false);
+  };
+
+  // 選擇訊息
+  const selectMessage = (msg: TelegramMessage) => {
+    setOriginalCode(msg.text);
+    setShowMessageList(false);
+  };
 
   const rewriteStrategy = async () => {
     if (!originalCode.trim()) {
@@ -77,13 +112,46 @@ export default function StrategyRewritePage() {
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">📄 原始策略</h2>
-              <button
-                onClick={clearAll}
-                className="text-sm text-gray-500 hover:text-gray-300"
-              >
-                清空
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={fetchFromGroup}
+                  disabled={isLoadingMessages}
+                  className="text-sm bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded transition-colors disabled:opacity-50"
+                >
+                  {isLoadingMessages ? "載入中..." : "📥 從群組獲取"}
+                </button>
+                <button
+                  onClick={clearAll}
+                  className="text-sm text-gray-500 hover:text-gray-300"
+                >
+                  清空
+                </button>
+              </div>
             </div>
+
+            {/* 群組訊息列表 */}
+            {showMessageList && messages.length > 0 && (
+              <div className="mb-4 bg-gray-800 rounded-lg p-3 max-h-48 overflow-y-auto">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-gray-400">選擇訊息：</span>
+                  <button
+                    onClick={() => setShowMessageList(false)}
+                    className="text-gray-500 hover:text-gray-300"
+                  >
+                    ✕
+                  </button>
+                </div>
+                {messages.map((msg) => (
+                  <button
+                    key={msg.message_id}
+                    onClick={() => selectMessage(msg)}
+                    className="w-full text-left p-2 hover:bg-gray-700 rounded text-sm truncate"
+                  >
+                    {msg.text.substring(0, 60)}...
+                  </button>
+                ))}
+              </div>
+            )}
             <textarea
               value={originalCode}
               onChange={(e) => setOriginalCode(e.target.value)}
