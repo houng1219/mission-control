@@ -8,7 +8,6 @@ interface StrategyMessage {
   text: string;
   from: string;
   date: string;
-  selected?: boolean;
 }
 
 export default function StrategyRewritePage() {
@@ -19,7 +18,6 @@ export default function StrategyRewritePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<string>("");
 
-  // 自動獲取群組策略
   const fetchStrategies = async () => {
     try {
       const response = await fetch("/api/telegram-strategies");
@@ -35,11 +33,8 @@ export default function StrategyRewritePage() {
     setIsLoading(false);
   };
 
-  // 頁面載入時自動獲取
   useEffect(() => {
     fetchStrategies();
-    
-    // 每 30 秒自動刷新
     const interval = setInterval(fetchStrategies, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -70,11 +65,11 @@ export default function StrategyRewritePage() {
 
   const copyToClipboard = (code: string) => {
     navigator.clipboard.writeText(code);
-    alert("已複製到剪貼簿！ return (
-    <div className="");
+    alert("已複製到剪貼簿！");
   };
 
- min-h-screen bg-gray-950 text-gray-100">
+  return (
+    <div className="min-h-screen bg-gray-950 text-gray-100">
       <div className="max-w-7xl mx-auto p-8">
         <Link href="/" className="text-blue-400 hover:underline mb-4 inline-block">
           ← 返回控制台
@@ -97,7 +92,6 @@ export default function StrategyRewritePage() {
         <p className="text-gray-400 mb-6">自動記錄群組內的策略代碼</p>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* 左側：群組策略列表 */}
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
             <h2 className="text-xl font-semibold mb-4">📥 群組策略</h2>
             
@@ -106,9 +100,7 @@ export default function StrategyRewritePage() {
             ) : strategies.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-500 mb-2">尚無策略</p>
-                <p className="text-sm text-gray-600">
-                  在群組發送策略代碼會自動顯示在這裡
-                </p>
+                <p className="text-sm text-gray-600">在群組發送策略代碼會自動顯示</p>
               </div>
             ) : (
               <div className="space-y-3 max-h-[600px] overflow-y-auto">
@@ -119,9 +111,7 @@ export default function StrategyRewritePage() {
                     className="bg-gray-800 rounded-lg p-3 hover:bg-gray-700 cursor-pointer transition-colors"
                   >
                     <div className="flex justify-between items-start mb-1">
-                      <span className="text-sm font-medium text-blue-400">
-                        #{strategy.id}
-                      </span>
+                      <span className="text-sm font-medium text-blue-400">#{strategy.id}</span>
                       <span className="text-xs text-gray-500">
                         {new Date(strategy.date).toLocaleString()}
                       </span>
@@ -129,16 +119,13 @@ export default function StrategyRewritePage() {
                     <p className="text-sm text-gray-300 truncate mb-1">
                       {strategy.text.substring(0, 50)}...
                     </p>
-                    <p className="text-xs text-gray-500">
-                      from: {strategy.from}
-                    </p>
+                    <p className="text-xs text-gray-500">from: {strategy.from}</p>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          {/* 中間：原始策略 */}
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">📄 原始策略</h2>
@@ -153,24 +140,18 @@ export default function StrategyRewritePage() {
               onClick={rewriteStrategy}
               disabled={isProcessing || !originalCode.trim()}
               className={`mt-4 w-full py-3 rounded-lg font-medium transition-colors ${
-                isProcessing || !originalCode.trim()
-                  ? "bg-gray-600 cursor-not-allowed"
-                  : "bg-green-600 hover:bg-green-700"
+                isProcessing || !originalCode.trim() ? "bg-gray-600 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
               }`}
             >
               {isProcessing ? "🔄 處理中..." : "🚀 開始改寫"}
             </button>
           </div>
 
-          {/* 右側：優化後策略 */}
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">✨ 優化後策略</h2>
               {rewrittenCode && (
-                <button
-                  onClick={() => copyToClipboard(rewrittenCode)}
-                  className="text-sm text-blue-400 hover:text-blue-300"
-                >
+                <button onClick={() => copyToClipboard(rewrittenCode)} className="text-sm text-blue-400 hover:text-blue-300">
                   📋 複製
                 </button>
               )}
@@ -184,7 +165,6 @@ export default function StrategyRewritePage() {
           </div>
         </div>
 
-        {/* 優化建議 */}
         <div className="mt-6 bg-gray-900 border border-gray-800 rounded-xl p-6">
           <h2 className="text-xl font-semibold mb-4">💡 優化建議</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
