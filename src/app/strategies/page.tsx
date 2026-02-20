@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 interface Strategy {
@@ -16,14 +17,40 @@ interface Strategy {
   winRate: number;
   trades: number;
   sharpe: number;
-  equityCurve?: number[];
 }
 
-export default function StrategiesPage() {
+function StrategiesContent() {
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [filter, setFilter] = useState<"all" | "active" | "testing" | "archived">("all");
   const [isLoading, setIsLoading] = useState(false);
+  const [imported, setImported] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const searchParams = useSearchParams();
+
+  // 從 URL 參數導入
+  useEffect(() => {
+    const data = searchParams.get('data');
+    if (data) {
+      try {
+        const decoded = JSON.parse(decodeURIComponent(data));
+        const newStrategy: Strategy = {
+          ...decoded,
+          id: "auto_" + Date.now(),
+          createdAt: new Date().toISOString(),
+          status: "testing"
+        };
+        
+        const saved = localStorage.getItem("strategies");
+        const existing = saved ? JSON.parse(saved) : [];
+        const updated = [...existing, newStrategy];
+        localStorage.setItem("strategies", JSON.stringify(updated));
+        setStrategies(updated);
+        setImported(true);
+      } catch (e) {
+        console.error("導入失敗", e);
+      }
+    }
+  }, [searchParams]);
 
   // 加載策略
   const loadStrategies = () => {
@@ -55,7 +82,6 @@ export default function StrategiesPage() {
       try {
         const content = e.target?.result as string;
         
-        // 支援 JSON 和 CSV
         if (file.name.endsWith('.json')) {
           const data = JSON.parse(content);
           const newStrategies = Array.isArray(data) ? data : [data];
@@ -76,7 +102,6 @@ export default function StrategiesPage() {
           saveToLocal([...strategies, ...mapped]);
           alert(`成功導入 ${mapped.length} 個策略！`);
         } else if (file.name.endsWith('.csv')) {
-          // CSV 解析
           const lines = content.split('\n').filter(l => l.trim());
           const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
           
@@ -110,7 +135,6 @@ export default function StrategiesPage() {
     };
     reader.readAsText(file);
     
-    // 重置 input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -139,6 +163,12 @@ export default function StrategiesPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
       <div className="max-w-7xl mx-auto p-8">
+        {imported && (
+          <div className="bg-green-900 border border-green-700 rounded-xl p-4 mb-4">
+            ✅ 策略導入成功！
+          </div>
+        )}
+        
         <Link href="/" className="text-blue-400 hover:underline mb-4 inline-block">
           ← 返回控制台
         </Link>
@@ -167,14 +197,6 @@ export default function StrategiesPage() {
             >
               {isLoading ? "🔄 載入中..." : "🔄 刷新"}
             </button>
-          </div>
-        </div>
-
-        {/* 支援 JSON 和 CSV 文件上傳 */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6">
-          <h3 className="font-semibold mb-2">📋 支援格式</h3>
-          <div className="text-sm text-gray-400">
-            <p>JSON 或 CSV 文件，須包含: name, code, return, maxDrawdown, winRate, sharpe, trades</p>
           </div>
         </div>
 
@@ -262,5 +284,13 @@ export default function StrategiesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function StrategiesPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-950 text-gray-100 p-8">載入中...</div>}>
+      <StrategiesContent />
+    </Suspense>
   );
 }
