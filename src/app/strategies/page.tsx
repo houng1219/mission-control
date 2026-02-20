@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
 interface Strategy {
@@ -23,38 +23,11 @@ export default function StrategiesPage() {
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [filter, setFilter] = useState<"all" | "active" | "testing" | "archived">("all");
   const [isLoading, setIsLoading] = useState(false);
-  const [showImport, setShowImport] = useState(false);
-  const [importData, setImportData] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 加載策略
-  const loadStrategies = async () => {
+  const loadStrategies = () => {
     setIsLoading(true);
-    try {
-      const response = await fetch("/api/telegram-strategies");
-      const data = await response.json();
-      
-      if (data.success && data.messages && data.messages.length > 0) {
-        const telegramStrategies: Strategy[] = data.messages.map((msg: any) => ({
-          id: `tg_${msg.id}`,
-          code: msg.text,
-          name: `策略_${msg.id}`,
-          symbol: "BTCUSDT",
-          timeframe: "1H",
-          status: "testing",
-          createdAt: msg.date,
-          return: Math.random() * 200 - 50,
-          maxDrawdown: Math.random() * 20,
-          winRate: Math.random() * 40 + 30,
-          trades: Math.floor(Math.random() * 200) + 20,
-          sharpe: Math.random() * 2,
-        }));
-        
-        setStrategies(prev => [...prev, ...telegramStrategies]);
-      }
-    } catch (e) {
-      console.error("加載失敗", e);
-    }
-    
     const saved = localStorage.getItem("strategies");
     if (saved) {
       setStrategies(JSON.parse(saved));
@@ -72,23 +45,74 @@ export default function StrategiesPage() {
     setStrategies(newStrategies);
   };
 
-  // 導入策略
-  const importStrategy = () => {
-    try {
-      const data = JSON.parse(importData);
-      const newStrategy: Strategy = {
-        ...data,
-        id: "import_" + Date.now(),
-        createdAt: new Date().toISOString(),
-        status: "testing"
-      };
-      const newStrategies = [...strategies, newStrategy];
-      saveToLocal(newStrategies);
-      setShowImport(false);
-      setImportData("");
-      alert("導入成功！");
-    } catch (e) {
-      alert("導入失敗，請檢查 JSON 格式");
+  // 處理文件上傳
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        
+        // 支援 JSON 和 CSV
+        if (file.name.endsWith('.json')) {
+          const data = JSON.parse(content);
+          const newStrategies = Array.isArray(data) ? data : [data];
+          const mapped = newStrategies.map((s: any, idx: number) => ({
+            id: s.id || `upload_${Date.now()}_${idx}`,
+            code: s.code || s.strategy || "",
+            name: s.name || s.strategyName || `策略_${Date.now()}`,
+            symbol: s.symbol || "BTCUSDT",
+            timeframe: s.timeframe || "1H",
+            status: "testing" as const,
+            createdAt: s.createdAt || new Date().toISOString(),
+            return: parseFloat(s.return) || 0,
+            maxDrawdown: parseFloat(s.maxDrawdown) || 0,
+            winRate: parseFloat(s.winRate) || 0,
+            trades: parseInt(s.trades) || 0,
+            sharpe: parseFloat(s.sharpe) || 0,
+          }));
+          saveToLocal([...strategies, ...mapped]);
+          alert(`成功導入 ${mapped.length} 個策略！`);
+        } else if (file.name.endsWith('.csv')) {
+          // CSV 解析
+          const lines = content.split('\n').filter(l => l.trim());
+          const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+          
+          const mapped: Strategy[] = lines.slice(1).map((line, idx) => {
+            const values = line.split(',').map(v => v.trim());
+            const obj: any = {};
+            headers.forEach((h, i) => obj[h] = values[i]);
+            
+            return {
+              id: `csv_${Date.now()}_${idx}`,
+              code: obj.code || obj.strategy || "",
+              name: obj.name || `策略_${idx + 1}`,
+              symbol: obj.symbol || "BTCUSDT",
+              timeframe: obj.timeframe || "1H",
+              status: "testing" as const,
+              createdAt: new Date().toISOString(),
+              return: parseFloat(obj.return) || 0,
+              maxDrawdown: parseFloat(obj.maxdrawdown) || 0,
+              winRate: parseFloat(obj.winrate) || 0,
+              trades: parseInt(obj.trades) || 0,
+              sharpe: parseFloat(obj.sharpe) || 0,
+            };
+          });
+          
+          saveToLocal([...strategies, ...mapped]);
+          alert(`成功導入 ${mapped.length} 個策略！`);
+        }
+      } catch (err) {
+        alert("解析失敗，請檢查文件格式");
+      }
+    };
+    reader.readAsText(file);
+    
+    // 重置 input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -122,12 +146,20 @@ export default function StrategiesPage() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">📊 策略回測庫</h1>
           <div className="flex gap-2">
-            <button
-              onClick={() => setShowImport(!showImport)}
-              className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg"
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept=".json,.csv"
+              className="hidden"
+              id="file-upload"
+            />
+            <label
+              htmlFor="file-upload"
+              className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg cursor-pointer"
             >
-              📥 導入
-            </button>
+              📤 上傳文件
+            </label>
             <button
               onClick={loadStrategies}
               disabled={isLoading}
@@ -138,24 +170,14 @@ export default function StrategiesPage() {
           </div>
         </div>
 
-        {/* 導入面板 */}
-        {showImport && (
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6">
-            <h3 className="font-semibold mb-2">導入策略數據</h3>
-            <textarea
-              value={importData}
-              onChange={(e) => setImportData(e.target.value)}
-              placeholder='{"name": "策略名", "code": "策略代碼", "return": 10.5, "maxDrawdown": 5.2, "winRate": 55, "sharpe": 1.2, "trades": 100}'
-              className="w-full h-32 bg-gray-800 border border-gray-700 rounded p-2 text-sm font-mono mb-2"
-            />
-            <button
-              onClick={importStrategy}
-              className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg"
-            >
-              確認導入
-            </button>
+        {/* 支援格式說明 */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6">
+          <h3 className="font-semibold mb-2">📋 支援格式</h3>
+          <div className="text-sm text-gray-400 space-y-2">
+            <p><strong className="text-green-400">JSON:</strong> [{{"name":"策略名","code":"代碼","return":10.5,"maxDrawdown":5.2,"winRate":55,"sharpe":1.2,"trades":100}}]</p>
+            <p><strong className="text-blue-400">CSV:</strong> name,code,return,maxDrawdown,winRate,sharpe,trades</p>
           </div>
-        )}
+        </div>
 
         {/* 篩選 */}
         <div className="flex gap-2 mb-6">
@@ -176,7 +198,7 @@ export default function StrategiesPage() {
         {filteredStrategies.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-gray-500 mb-2">尚無策略</p>
-            <p className="text-sm text-gray-600">點擊「導入」按鈕貼上回測數據</p>
+            <p className="text-sm text-gray-600">點擊「上傳文件」導入 JSON 或 CSV</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
